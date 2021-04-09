@@ -1,0 +1,1 @@
+Test DirectML operators without any dependencies.
