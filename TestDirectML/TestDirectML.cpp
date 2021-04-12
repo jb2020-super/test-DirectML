@@ -9,9 +9,11 @@ int main()
 		DMLInferer inferer;
 		inferer.InitD3D12();
 		inferer.InitDML();
-		inferer.CreateConvolutionOp();
+		//inferer.CreateOperator(DML_OPERATOR_ELEMENT_WISE_IDENTITY);
+		inferer.CreateOperator(DML_OPERATOR_CONVOLUTION);
 		inferer.InitializeOp();
 		inferer.ExecuteOp();
+		inferer.PrintOutput();
 	}
 	catch (const std::exception& e)
 	{
