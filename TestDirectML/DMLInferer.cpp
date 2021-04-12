@@ -198,12 +198,7 @@ void DMLInferer::PrintOutput()
 	FLOAT* out_data{};
 	check_hresult(readback_buffer->Map(0, &range, reinterpret_cast<void**>(&out_data)));
 	
-	for (int i = 0, idx = 0; i < m_output_tensor.Height(); ++i) {
-		for (int j = 0; j < m_output_tensor.Width(); ++j, ++idx) {
-			std::cout << out_data[idx] << ' ';
-		}
-		std::cout << std::endl;
-	}
+	_print_tensor(m_output_tensor, out_data);	
 	
 	D3D12_RANGE empty_rg{};
 	readback_buffer->Unmap(0, &empty_rg);
@@ -321,6 +316,19 @@ void DMLInferer::_close_execute()
 	check_hresult(m_cmd_list->Reset(m_cmd_allocator.get(), nullptr));
 }
 
+void DMLInferer::_print_tensor(DMLTensor& tensor, FLOAT* data)
+{
+	int height = tensor.Height();
+	int width = tensor.Width();
+	std::cout << "Dimension: " << height << 'x' << width << std::endl;
+	for (int i = 0, idx = 0; i < tensor.Height(); ++i) {
+		for (int j = 0; j < tensor.Width(); ++j) {
+			std::cout << data[idx++] << '\t';
+		}
+		std::cout << std::endl;
+	}
+}
+
 void DMLInferer::_upload_convolution_data()
 {
 	auto input_size = m_input_tensor.GetTensorSizeInBytes();
@@ -328,6 +336,7 @@ void DMLInferer::_upload_convolution_data()
 	for (int i = 0; i < m_input_tensor.GetElementCount(); ++i) {
 		input_data.get()[i] = 1.618f;
 	}
+	_print_tensor(m_input_tensor, input_data.get());
 	_create_resource(input_data.get(), input_size, m_input_rc, m_upload_rc);
 
 	auto filter_size = m_filter_tensor.GetTensorSizeInBytes();
@@ -335,6 +344,7 @@ void DMLInferer::_upload_convolution_data()
 	for (int i = 0; i < m_filter_tensor.GetElementCount(); ++i) {
 		filter_data.get()[i] = 1.0f;
 	}
+	_print_tensor(m_filter_tensor, filter_data.get());
 	_create_resource(filter_data.get(), filter_size, m_filter_rc, m_upload_rc2);
 
 	DML_BUFFER_BINDING input_buffer_bd = { m_input_rc.get(), 0, m_input_rc->GetDesc().Width };
@@ -356,6 +366,7 @@ void DMLInferer::_upload_identity_data()
 	for (int i = 0; i < m_input_tensor.GetElementCount(); ++i) {
 		input_data.get()[i] = 1.618f;
 	}
+	_print_tensor(m_input_tensor, input_data.get());
 	_create_resource(input_data.get(), input_size, m_input_rc, m_upload_rc);
 	DML_BUFFER_BINDING input_buffer_bd = { m_input_rc.get(), 0, m_input_rc->GetDesc().Width };
 	DML_BINDING_DESC input_binding = { DML_BINDING_TYPE_BUFFER, &input_buffer_bd };

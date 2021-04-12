@@ -38,8 +38,10 @@ public:
 private:
 	void _create_resource(FLOAT* data, UINT64 buffer_size, winrt::com_ptr<ID3D12Resource>& rc, winrt::com_ptr<ID3D12Resource>& upload_rc);
 	void _close_execute();
+	void _print_tensor(DMLTensor& tensor, FLOAT* data);
 	void _upload_convolution_data();
 	void _upload_identity_data();
+
 
 	DML_OPERATOR_TYPE m_op_type{};
 	winrt::com_ptr<ID3D12Device8> m_device;
