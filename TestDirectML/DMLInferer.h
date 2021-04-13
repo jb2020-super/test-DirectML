@@ -30,6 +30,7 @@ public:
 	void CreateOperator(DML_OPERATOR_TYPE op_type);
 	void CreateConvolutionOp();
 	void CreateIdentityOp();
+	void CreateTransposedConvolutionOp();
 	void ExecuteOp();
 	void InitD3D12();
 	void InitDML();
@@ -64,5 +65,6 @@ private:
 	DMLTensor m_input_tensor;
 	DMLTensor m_filter_tensor;
 	DMLTensor m_output_tensor;
+	bool m_is_backward{ false };
 };
 

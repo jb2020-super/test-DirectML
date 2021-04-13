@@ -10,7 +10,8 @@ int main()
 		inferer.InitD3D12();
 		inferer.InitDML();
 		//inferer.CreateOperator(DML_OPERATOR_ELEMENT_WISE_IDENTITY);
-		inferer.CreateOperator(DML_OPERATOR_CONVOLUTION);
+		//inferer.CreateOperator(DML_OPERATOR_CONVOLUTION);
+		inferer.CreateTransposedConvolutionOp();
 		inferer.InitializeOp();
 		inferer.ExecuteOp();
 		inferer.PrintOutput();

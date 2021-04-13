@@ -48,8 +48,8 @@ void DMLInferer::InitD3D12()
 	// 2. dGPUs (discrete GPUs)
 	// 3. xGPUs (external GPUs)
 	check_hresult(dxgi_factory->EnumAdapterByGpuPreference(0, 
-		//DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, 
-		DXGI_GPU_PREFERENCE_MINIMUM_POWER,
+		DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, 
+		//DXGI_GPU_PREFERENCE_MINIMUM_POWER,
 		__uuidof(dxgi_adapter), 
 		dxgi_adapter.put_void()));
 	DXGI_ADAPTER_DESC3 adapter_desc{};
@@ -120,6 +120,43 @@ void DMLInferer::CreateIdentityOp()
 	od.Type = DML_OPERATOR_ELEMENT_WISE_IDENTITY;
 	od.Desc = &op_desc;
 	check_hresult(m_dml_device->CreateOperator(&od, __uuidof(m_dml_op), m_dml_op.put_void()));
+	check_hresult(m_dml_device->CompileOperator(m_dml_op.get(), DML_EXECUTION_FLAG_NONE, __uuidof(m_pso), m_pso.put_void()));
+}
+
+void DMLInferer::CreateTransposedConvolutionOp()
+{
+	m_op_type = DML_OPERATOR_CONVOLUTION;
+	m_is_backward = true;
+	UINT input_dim[4]{ 1, 1, 10, 10 };
+	m_input_tensor.Create(DML_TENSOR_DATA_TYPE_FLOAT32, input_dim, 4);
+	UINT filter_dim[4]{ 1, 1, 4, 4 };
+	m_filter_tensor.Create(DML_TENSOR_DATA_TYPE_FLOAT32, filter_dim, 4);
+	UINT output_dim[4]{ 1, 1, 16, 16 };
+	m_output_tensor.Create(DML_TENSOR_DATA_TYPE_FLOAT32, output_dim, 4);
+	DML_CONVOLUTION_OPERATOR_DESC conv_op_desc{};
+	conv_op_desc.InputTensor = &m_input_tensor.GetDesc();
+	conv_op_desc.FilterTensor = &m_filter_tensor.GetDesc();
+	conv_op_desc.BiasTensor = nullptr;
+	conv_op_desc.OutputTensor = &m_output_tensor.GetDesc();
+	conv_op_desc.Mode = DML_CONVOLUTION_MODE_CROSS_CORRELATION;
+	conv_op_desc.Direction = DML_CONVOLUTION_DIRECTION_BACKWARD;
+	conv_op_desc.DimensionCount = m_input_tensor.DimCount() - 2;
+	UINT strides[2] = { 2, 2 };
+	conv_op_desc.Strides = strides;
+	UINT dilations[2] = { 1, 1 };
+	conv_op_desc.Dilations = dilations;
+	UINT start_pad[2] = { 3, 3 };
+	conv_op_desc.StartPadding = start_pad;
+	UINT end_pad[2] = { 3, 3 };
+	conv_op_desc.EndPadding = end_pad;
+	UINT output_pad[2] = { 0, 0 };
+	conv_op_desc.OutputPadding = output_pad;
+	conv_op_desc.GroupCount = 1;
+	conv_op_desc.FusedActivation = nullptr;
+	DML_OPERATOR_DESC op_desc{};
+	op_desc.Type = DML_OPERATOR_CONVOLUTION;
+	op_desc.Desc = &conv_op_desc;
+	check_hresult(m_dml_device->CreateOperator(&op_desc, __uuidof(m_dml_op), m_dml_op.put_void()));
 	check_hresult(m_dml_device->CompileOperator(m_dml_op.get(), DML_EXECUTION_FLAG_NONE, __uuidof(m_pso), m_pso.put_void()));
 }
 
