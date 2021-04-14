@@ -27,22 +27,25 @@ class DMLInferer
 public:
 	DMLInferer();
 	~DMLInferer();
+	void CreateAddOp(DML_TENSOR_DATA_TYPE dtype);
 	void CreateOperator(DML_OPERATOR_TYPE op_type);
-	void CreateConvolutionOp();
+	void CreateConvolutionOp(DML_TENSOR_DATA_TYPE dtype);
 	void CreateIdentityOp();
-	void CreateTransposedConvolutionOp();
+	void CreateTransposedConvolutionOp(DML_TENSOR_DATA_TYPE data_type);
 	void ExecuteOp();
 	void InitD3D12();
 	void InitDML();
 	void InitializeOp();
 	void PrintOutput();
 private:
-	void _create_resource(FLOAT* data, UINT64 buffer_size, winrt::com_ptr<ID3D12Resource>& rc, winrt::com_ptr<ID3D12Resource>& upload_rc);
+	void _create_resource(void* data, UINT64 buffer_size, winrt::com_ptr<ID3D12Resource>& rc, winrt::com_ptr<ID3D12Resource>& upload_rc);
 	void _close_execute();
-	void _print_tensor(DMLTensor& tensor, FLOAT* data);
+	template<class DataType>
+	void _print_tensor(const char* tensor_name, DMLTensor& tensor, DataType* data);
 	void _upload_convolution_data();
 	void _upload_identity_data();
-
+	void _upload_add_data();
+	UINT _cal_transposed_conv_2d_out_size(UINT input, UINT stride, UINT pad, UINT dilation, UINT kernel, UINT out_pad);
 
 	DML_OPERATOR_TYPE m_op_type{};
 	winrt::com_ptr<ID3D12Device8> m_device;
@@ -65,6 +68,20 @@ private:
 	DMLTensor m_input_tensor;
 	DMLTensor m_filter_tensor;
 	DMLTensor m_output_tensor;
+	DML_TENSOR_DATA_TYPE m_data_type{};
 	bool m_is_backward{ false };
 };
 
+template<class DataType>
+inline void DMLInferer::_print_tensor(const char* tensor_name, DMLTensor& tensor, DataType* data)
+{
+	int height = tensor.Height();
+	int width = tensor.Width();
+	std::cout << tensor_name << " tensor dimension: " << height << "x" << width << std::endl;
+	for (int i = 0, idx = 0; i < tensor.Height(); ++i) {
+		for (int j = 0; j < tensor.Width(); ++j) {
+			std::cout << data[idx++] << "\t";
+		}
+		std::cout << std::endl;
+	}
+}
