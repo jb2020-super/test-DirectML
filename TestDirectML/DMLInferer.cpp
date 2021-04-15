@@ -162,7 +162,7 @@ void DMLInferer::CreateTransposedConvolutionOp(DML_TENSOR_DATA_TYPE data_type)
 	m_input_tensor.Create(data_type, input_dim, 4);
 	UINT filter_dim[4]{ 1, 1, 3, 3 };
 	m_filter_tensor.Create(data_type, filter_dim, 4);
-	UINT strides[2] = { 1, 1 };
+	UINT strides[2] = { 2, 2 };
 	UINT dilations[2] = { 1, 1 };
 	UINT start_pad[2] = { 0, 0 };
 	UINT end_pad[2] = { 0, 0 };
@@ -412,6 +412,7 @@ void DMLInferer::_upload_convolution_data()
 {
 	auto input_size = m_input_tensor.GetTensorSizeInBytes();
 	if (m_data_type == DML_TENSOR_DATA_TYPE_FLOAT16) {
+		
 		std::unique_ptr<uint16_t> input_data = std::unique_ptr<uint16_t>(new uint16_t[m_input_tensor.GetElementCount()]);
 		std::unique_ptr<FLOAT> data = std::unique_ptr<FLOAT>(new FLOAT[m_input_tensor.GetElementCount()]);
 		for (int i = 0; i < m_input_tensor.GetElementCount(); ++i) {
@@ -420,6 +421,15 @@ void DMLInferer::_upload_convolution_data()
 		}
 		_print_tensor("input", m_input_tensor, data.get());
 		_create_resource(input_data.get(), input_size, m_input_rc, m_upload_rc);		
+		auto filter_size = m_filter_tensor.GetTensorSizeInBytes();
+		std::unique_ptr<uint16_t> filter_data = std::unique_ptr<uint16_t>(new uint16_t[m_filter_tensor.GetElementCount()]);
+		std::unique_ptr<FLOAT> filter_data_f = std::unique_ptr<FLOAT>(new FLOAT[m_filter_tensor.GetElementCount()]);
+		for (int i = 0; i < m_filter_tensor.GetElementCount(); ++i) {
+			filter_data.get()[i] = Float16Compressor::compress(1.0f);
+			filter_data_f.get()[i] = Float16Compressor::decompress(filter_data.get()[i]);
+		}
+		_print_tensor("filter", m_filter_tensor, filter_data_f.get());
+		_create_resource(filter_data.get(), filter_size, m_filter_rc, m_upload_rc2);
 	}
 	else if (m_data_type == DML_TENSOR_DATA_TYPE_INT16) {
 		std::unique_ptr<int16_t> input_data = std::unique_ptr<int16_t>(new int16_t[m_input_tensor.GetElementCount()]);
@@ -436,15 +446,16 @@ void DMLInferer::_upload_convolution_data()
 		}
 		_print_tensor("input", m_input_tensor, input_data.get());
 		_create_resource(input_data.get(), input_size, m_input_rc, m_upload_rc);
+		auto filter_size = m_filter_tensor.GetTensorSizeInBytes();
+		std::unique_ptr<FLOAT> filter_data = std::unique_ptr<FLOAT>(new FLOAT[m_filter_tensor.GetElementCount()]);
+		for (int i = 0; i < m_filter_tensor.GetElementCount(); ++i) {
+			filter_data.get()[i] = 1.0f;
+		}
+		_print_tensor("filter", m_filter_tensor, filter_data.get());
+		_create_resource(filter_data.get(), filter_size, m_filter_rc, m_upload_rc2);
 	}
 
-	auto filter_size = m_filter_tensor.GetTensorSizeInBytes();
-	std::unique_ptr<FLOAT> filter_data = std::unique_ptr<FLOAT>(new FLOAT[m_filter_tensor.GetElementCount()]);
-	for (int i = 0; i < m_filter_tensor.GetElementCount(); ++i) {
-		filter_data.get()[i] = 1.0f;
-	}
-	_print_tensor("filter", m_filter_tensor, filter_data.get());
-	_create_resource(filter_data.get(), filter_size, m_filter_rc, m_upload_rc2);
+	
 
 	DML_BUFFER_BINDING input_buffer_bd = { m_input_rc.get(), 0, m_input_rc->GetDesc().Width };
 	DML_BINDING_DESC input_binding = { DML_BINDING_TYPE_BUFFER, &input_buffer_bd };
