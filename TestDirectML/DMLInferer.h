@@ -48,7 +48,7 @@ private:
 	UINT _cal_transposed_conv_2d_out_size(UINT input, UINT stride, UINT pad, UINT dilation, UINT kernel, UINT out_pad);
 
 	DML_OPERATOR_TYPE m_op_type{};
-	winrt::com_ptr<ID3D12Device8> m_device;
+	winrt::com_ptr<ID3D12Device> m_device;
 	winrt::com_ptr<ID3D12CommandQueue> m_cmd_queue;
 	winrt::com_ptr<ID3D12CommandAllocator> m_cmd_allocator;
 	winrt::com_ptr<ID3D12GraphicsCommandList> m_cmd_list;
