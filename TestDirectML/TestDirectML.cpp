@@ -7,7 +7,7 @@ int main()
 	try
 	{
 		DMLInferer inferer;
-		inferer.InitD3D12();
+		inferer.InitD3D12(true);
 		inferer.InitDML();
 		//inferer.CreateAddOp(DML_TENSOR_DATA_TYPE_FLOAT16);
 		//inferer.CreateOperator(DML_OPERATOR_ELEMENT_WISE_IDENTITY);

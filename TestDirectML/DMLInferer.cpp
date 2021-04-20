@@ -50,7 +50,7 @@ void DMLInferer::CreateOperator(DML_OPERATOR_TYPE op_type)
 	}
 }
 
-void DMLInferer::InitD3D12()
+void DMLInferer::InitD3D12(bool use_warp)
 {
 #if defined _DEBUG
 	com_ptr<ID3D12Debug1> d3d12_debug;
@@ -66,15 +66,21 @@ void DMLInferer::InitD3D12()
 	com_ptr<IDXGIFactory6> dxgi_factory;
 	check_hresult(CreateDXGIFactory1(__uuidof(dxgi_factory), dxgi_factory.put_void()));
 	com_ptr<IDXGIAdapter4> dxgi_adapter;
-	// Enum GPU by performance, from low to high:
-	// 1. iGPUs (integrated GPUs)
-	// 2. dGPUs (discrete GPUs)
-	// 3. xGPUs (external GPUs)
-	check_hresult(dxgi_factory->EnumAdapterByGpuPreference(0, 
-		//DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, 
-		DXGI_GPU_PREFERENCE_MINIMUM_POWER,
-		__uuidof(dxgi_adapter), 
-		dxgi_adapter.put_void()));
+	if (use_warp) {
+		check_hresult(dxgi_factory->EnumWarpAdapter(__uuidof(dxgi_adapter), dxgi_adapter.put_void()));
+	}
+	else
+	{
+		// Enum GPU by performance, from low to high:
+		// 1. iGPUs (integrated GPUs)
+		// 2. dGPUs (discrete GPUs)
+		// 3. xGPUs (external GPUs)
+		check_hresult(dxgi_factory->EnumAdapterByGpuPreference(0,
+			//DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, 
+			DXGI_GPU_PREFERENCE_MINIMUM_POWER,
+			__uuidof(dxgi_adapter),
+			dxgi_adapter.put_void()));
+	}
 	DXGI_ADAPTER_DESC3 adapter_desc{};
 	check_hresult(dxgi_adapter->GetDesc3(&adapter_desc));
 	check_hresult(D3D12CreateDevice(dxgi_adapter.get(), D3D_FEATURE_LEVEL_12_0, __uuidof(m_device), m_device.put_void()));

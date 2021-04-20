@@ -33,7 +33,7 @@ public:
 	void CreateIdentityOp();
 	void CreateTransposedConvolutionOp(DML_TENSOR_DATA_TYPE data_type);
 	void ExecuteOp();
-	void InitD3D12();
+	void InitD3D12(bool use_warp=false);
 	void InitDML();
 	void InitializeOp();
 	void PrintOutput();
