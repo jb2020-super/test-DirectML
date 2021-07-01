@@ -8,6 +8,7 @@
 #include <dxgi1_6.h>
 #include <d3d12.h>
 #include <DirectML.h>
+#include <DXProgrammableCapture.h>
 #include "d3dx12.h"
 
 UINT64 DMLCalcBufferTensorSize(

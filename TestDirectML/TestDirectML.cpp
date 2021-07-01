@@ -7,13 +7,13 @@ int main()
 	try
 	{
 		DMLInferer inferer;
-		inferer.InitD3D12(true);
+		inferer.InitD3D12();
 		inferer.InitDML();
 		//inferer.CreateAddOp(DML_TENSOR_DATA_TYPE_FLOAT16);
 		//inferer.CreateOperator(DML_OPERATOR_ELEMENT_WISE_IDENTITY);
 		//inferer.CreateOperator(DML_OPERATOR_CONVOLUTION);
-		//inferer.CreateConvolutionOp(DML_TENSOR_DATA_TYPE_FLOAT32);
-		inferer.CreateTransposedConvolutionOp(DML_TENSOR_DATA_TYPE_FLOAT16);
+		inferer.CreateConvolutionOp(DML_TENSOR_DATA_TYPE_FLOAT16);
+		//inferer.CreateTransposedConvolutionOp(DML_TENSOR_DATA_TYPE_FLOAT16);
 		//inferer.CreateTransposedConvolutionOp(DML_TENSOR_DATA_TYPE_FLOAT32/*DML_TENSOR_DATA_TYPE_INT16*/);
 		inferer.InitializeOp();
 		inferer.ExecuteOp();

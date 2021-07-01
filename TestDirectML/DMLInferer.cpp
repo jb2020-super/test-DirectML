@@ -76,8 +76,8 @@ void DMLInferer::InitD3D12(bool use_warp)
 		// 2. dGPUs (discrete GPUs)
 		// 3. xGPUs (external GPUs)
 		check_hresult(dxgi_factory->EnumAdapterByGpuPreference(0,
-			//DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, 
-			DXGI_GPU_PREFERENCE_MINIMUM_POWER,
+			DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, 
+			//DXGI_GPU_PREFERENCE_MINIMUM_POWER,
 			__uuidof(dxgi_adapter),
 			dxgi_adapter.put_void()));
 	}
@@ -91,7 +91,7 @@ void DMLInferer::InitD3D12(bool use_warp)
 	check_hresult(m_device->CreateCommandQueue(&command_queue_desc, __uuidof(m_cmd_queue), m_cmd_queue.put_void()));
 	check_hresult(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(m_cmd_allocator), m_cmd_allocator.put_void()));
 	check_hresult(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_cmd_allocator.get(), nullptr, __uuidof(m_cmd_list), m_cmd_list.put_void()));
-
+	DXGIGetDebugInterface1(0, __uuidof(m_dxgraphics_analysis), m_dxgraphics_analysis.put_void());
 }
 
 void DMLInferer::InitDML()
@@ -132,7 +132,12 @@ void DMLInferer::CreateConvolutionOp(DML_TENSOR_DATA_TYPE dtype)
 	UINT output_pad[2] = { 0, 0 };
 	conv_op_desc.OutputPadding = output_pad;
 	conv_op_desc.GroupCount = 1;
-	conv_op_desc.FusedActivation = nullptr;
+	/*DML_ACTIVATION_RELU_OPERATOR_DESC relu_op{};
+	DML_OPERATOR_DESC activation_op = { DML_OPERATOR_ACTIVATION_RELU, &relu_op };*/
+	DML_ACTIVATION_LEAKY_RELU_OPERATOR_DESC leaky_relu{};
+	leaky_relu.Alpha = 0.1f;
+	DML_OPERATOR_DESC activation_op = { DML_OPERATOR_ACTIVATION_LEAKY_RELU, &leaky_relu };
+	conv_op_desc.FusedActivation = &activation_op;
 	DML_OPERATOR_DESC op_desc{};
 	op_desc.Type = DML_OPERATOR_CONVOLUTION;
 	op_desc.Desc = &conv_op_desc;
@@ -251,7 +256,18 @@ void DMLInferer::InitializeOp()
 
 	}
 	if (pst_size > 0) {
-		winrt::throw_hresult(E_NOTIMPL);
+		check_hresult(m_device->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+			D3D12_HEAP_FLAG_NONE,
+			&CD3DX12_RESOURCE_DESC::Buffer(pst_size, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS),
+			D3D12_RESOURCE_STATE_COMMON,
+			nullptr,
+			__uuidof(m_presis_buffer),
+			m_presis_buffer.put_void()
+		));
+		DML_BUFFER_BINDING bd{ m_presis_buffer.get(), 0, m_presis_buffer->GetDesc().Width };
+		DML_BINDING_DESC desc{ DML_BINDING_TYPE_BUFFER, &bd };
+		m_binding_tlb->BindOutputs(1, &desc);
 	}
 	check_hresult(m_dml_device->CreateCommandRecorder(__uuidof(m_recoder), m_recoder.put_void()));
 	m_recoder->RecordDispatch(m_cmd_list.get(), m_op_initer.get(), m_binding_tlb.get());
@@ -301,6 +317,9 @@ void DMLInferer::PrintOutput()
 
 void DMLInferer::ExecuteOp()
 {
+	if (m_dxgraphics_analysis) {
+		m_dxgraphics_analysis->BeginCapture();
+	}
 	ID3D12DescriptorHeap* heap_ptrs[] = { m_dsp_heap.get() };
 	m_cmd_list->SetDescriptorHeaps(1, heap_ptrs);
 
@@ -323,7 +342,9 @@ void DMLInferer::ExecuteOp()
 		m_binding_tlb->BindTemporaryResource(&desc);
 	}
 	if (pst_size > 0) {
-		winrt::throw_hresult(E_NOTIMPL);
+		DML_BUFFER_BINDING bd{ m_presis_buffer.get(), 0, pst_size };
+		DML_BINDING_DESC desc{ DML_BINDING_TYPE_BUFFER, &bd };
+		m_binding_tlb->BindPersistentResource(&desc);
 	}
 	switch (m_op_type)
 	{
@@ -347,6 +368,9 @@ void DMLInferer::ExecuteOp()
 
 	m_recoder->RecordDispatch(m_cmd_list.get(), m_pso.get(), m_binding_tlb.get());
 	_close_execute();
+	if (m_dxgraphics_analysis) {
+		m_dxgraphics_analysis->EndCapture();
+	}
 }
 
 void DMLInferer::_create_resource(void* data, UINT64 buffer_size, winrt::com_ptr<ID3D12Resource>& rc, winrt::com_ptr<ID3D12Resource>& upload_rc)
@@ -421,8 +445,9 @@ void DMLInferer::_upload_convolution_data()
 		
 		std::unique_ptr<uint16_t> input_data = std::unique_ptr<uint16_t>(new uint16_t[m_input_tensor.GetElementCount()]);
 		std::unique_ptr<FLOAT> data = std::unique_ptr<FLOAT>(new FLOAT[m_input_tensor.GetElementCount()]);
+		int base = -10;
 		for (int i = 0; i < m_input_tensor.GetElementCount(); ++i) {
-			input_data.get()[i] = Float16Compressor::compress(i);
+			input_data.get()[i] = Float16Compressor::compress(base + i);
 			data.get()[i] = Float16Compressor::decompress(input_data.get()[i]);
 		}
 		_print_tensor("input", m_input_tensor, data.get());

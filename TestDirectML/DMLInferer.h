@@ -63,8 +63,10 @@ private:
 	winrt::com_ptr<ID3D12Resource> m_filter_rc;
 	winrt::com_ptr<ID3D12Resource> m_output_rc;
 	winrt::com_ptr<ID3D12Resource> m_tmp_buffer;
+	winrt::com_ptr<ID3D12Resource> m_presis_buffer;
 	winrt::com_ptr<ID3D12Resource> m_upload_rc;
 	winrt::com_ptr<ID3D12Resource> m_upload_rc2;
+	winrt::com_ptr<IDXGraphicsAnalysis> m_dxgraphics_analysis;
 	DMLTensor m_input_tensor;
 	DMLTensor m_filter_tensor;
 	DMLTensor m_output_tensor;
