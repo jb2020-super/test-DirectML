@@ -18,6 +18,7 @@ public:
 private:
 	
 	UINT m_dims[5];
+	UINT m_input_strides[4]{};
 	DML_BUFFER_TENSOR_DESC m_buffer_desc;
 	DML_TENSOR_DESC m_desc;
 };

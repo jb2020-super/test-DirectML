@@ -151,6 +151,10 @@ void DMLInferer::CreateConvolutionOp(DML_TENSOR_DATA_TYPE dtype, DML_OPERATOR_TY
 		DML_ACTIVATION_TANH_OPERATOR_DESC* tanh_op = new DML_ACTIVATION_TANH_OPERATOR_DESC{};
 		op_desc.Desc = tanh_op;
 	}
+	else if (op_type == DML_OPERATOR_ACTIVATION_SIGMOID) {
+		DML_ACTIVATION_SIGMOID_OPERATOR_DESC* sigmoid_op = new DML_ACTIVATION_SIGMOID_OPERATOR_DESC{};
+		op_desc.Desc = sigmoid_op;
+	}
 	else
 	{
 
@@ -582,7 +586,7 @@ DMLTensor::~DMLTensor()
 
 void DMLTensor::Create(DML_TENSOR_DATA_TYPE data_type, const UINT* dims, UINT dim_cnt, bool is_interleaved)
 {
-	if (dim_cnt != 4 && dim_cnt != 5) {
+	if (dim_cnt != 4 /*&& dim_cnt != 5*/) {
 		winrt::throw_hresult(E_INVALIDARG);
 	}
 	memcpy(m_dims, dims, sizeof(UINT) * dim_cnt);
@@ -590,12 +594,12 @@ void DMLTensor::Create(DML_TENSOR_DATA_TYPE data_type, const UINT* dims, UINT di
 	m_buffer_desc.Flags = DML_TENSOR_FLAG_NONE;
 	m_buffer_desc.DimensionCount = dim_cnt;
 	m_buffer_desc.Sizes = m_dims;
-	UINT strides[4]{};
-	strides[0] = dims[1] * dims[2] * dims[3];
-	strides[1] = 1;
-	strides[2] = dims[1];
-	strides[3] = dims[1] * dims[2];
-	m_buffer_desc.Strides = is_interleaved ? strides : nullptr;
+	
+	m_input_strides[0] = dims[1] * dims[2] * dims[3];
+	m_input_strides[1] = 1;
+	m_input_strides[2] = dims[1];
+	m_input_strides[3] = dims[1] * dims[2];
+	m_buffer_desc.Strides = is_interleaved ? m_input_strides : nullptr;
 	m_buffer_desc.TotalTensorSizeInBytes = DMLCalcBufferTensorSize(data_type, dim_cnt, dims, nullptr);
 	m_buffer_desc.GuaranteedBaseOffsetAlignment = 256;
 

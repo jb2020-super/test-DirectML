@@ -2,12 +2,12 @@
 ## Identity Op
 ## Convolution Op
 
-### Performance
+### Convolution Performance
 
-| Device      | Convolution(ns) | Convolution Optimized(ns) |
-| ----------- | --------------- | ------------------------- |
-| AMD 5700 XT | 148,160         | NA                        |
-| RTX 3090    | 318,016         | 45,120                    |
+| Device      | Conv_No_op(ns) | Conv(ns) | Conv+Relu | Conv+Tanh | Conv+Sigmoid | Conv+LeakyRelu |
+| ----------- | -------------- | -------- | --------- | --------- | ------------ | -------------- |
+| AMD 5700 XT | 148,160        | NA       | 148,080   | 191,400   | 191,880      | 148,360        |
+| RTX 3090    | 318,016        | 45,120   | 48,096    | 57,088    | 48,074       | 47,296         |
 
 - RTX 3090
 
