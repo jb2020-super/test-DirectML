@@ -29,7 +29,7 @@ public:
 	~DMLInferer();
 	void CreateAddOp(DML_TENSOR_DATA_TYPE dtype);
 	void CreateOperator(DML_OPERATOR_TYPE op_type);
-	void CreateConvolutionOp(DML_TENSOR_DATA_TYPE dtype);
+	void CreateConvolutionOp(DML_TENSOR_DATA_TYPE dtype, DML_OPERATOR_TYPE op_type);
 	void CreateIdentityOp();
 	void CreateTransposedConvolutionOp(DML_TENSOR_DATA_TYPE data_type);
 	void ExecuteOp();
@@ -72,18 +72,21 @@ private:
 	DMLTensor m_output_tensor;
 	DML_TENSOR_DATA_TYPE m_data_type{};
 	bool m_is_backward{ false };
+	bool m_enable_print{ false };
 };
 
 template<class DataType>
 inline void DMLInferer::_print_tensor(const char* tensor_name, DMLTensor& tensor, DataType* data)
 {
-	int height = tensor.Height();
-	int width = tensor.Width();
-	std::cout << tensor_name << " tensor dimension: " << height << "x" << width << std::endl;
-	for (int i = 0, idx = 0; i < tensor.Height(); ++i) {
-		for (int j = 0; j < tensor.Width(); ++j) {
-			std::cout << data[idx++] << "\t";
+	if (m_enable_print) {
+		int height = tensor.Height();
+		int width = tensor.Width();
+		std::cout << tensor_name << " tensor dimension: " << height << "x" << width << std::endl;
+		for (int i = 0, idx = 0; i < tensor.Height(); ++i) {
+			for (int j = 0; j < tensor.Width(); ++j) {
+				std::cout << data[idx++] << "\t";
+			}
+			std::cout << std::endl;
 		}
-		std::cout << std::endl;
 	}
 }

@@ -43,7 +43,7 @@ void DMLInferer::CreateOperator(DML_OPERATOR_TYPE op_type)
 		CreateIdentityOp();
 		break;
 	case DML_OPERATOR_CONVOLUTION:
-		CreateConvolutionOp(DML_TENSOR_DATA_TYPE_FLOAT32);
+		CreateConvolutionOp(DML_TENSOR_DATA_TYPE_FLOAT32, DML_OPERATOR_ACTIVATION_RELU);
 		break;
 	default:
 		break;
@@ -103,12 +103,12 @@ void DMLInferer::InitDML()
 	check_hresult(DMLCreateDevice(m_device.get(), flg, __uuidof(m_dml_device), m_dml_device.put_void()));
 }
 
-void DMLInferer::CreateConvolutionOp(DML_TENSOR_DATA_TYPE dtype)
+void DMLInferer::CreateConvolutionOp(DML_TENSOR_DATA_TYPE dtype, DML_OPERATOR_TYPE op_type)
 {
 	m_op_type = DML_OPERATOR_CONVOLUTION;
 	m_data_type = dtype;
 	DML_TENSOR_DATA_TYPE data_type{ dtype };
-	UINT input_dim[4]{ 1, 1, 10, 10 };
+	UINT input_dim[4]{ 1, 1, 960, 540 };
 	m_input_tensor.Create(data_type, input_dim, 4);
 	UINT filter_dim[4]{ 1, 1, 3, 3 };
 	m_filter_tensor.Create(data_type, filter_dim, 4);
@@ -132,21 +132,40 @@ void DMLInferer::CreateConvolutionOp(DML_TENSOR_DATA_TYPE dtype)
 	UINT output_pad[2] = { 0, 0 };
 	conv_op_desc.OutputPadding = output_pad;
 	conv_op_desc.GroupCount = 1;
-	/*DML_ACTIVATION_RELU_OPERATOR_DESC relu_op{};
-	DML_OPERATOR_DESC activation_op = { DML_OPERATOR_ACTIVATION_RELU, &relu_op };*/
-	DML_ACTIVATION_LEAKY_RELU_OPERATOR_DESC leaky_relu{};
-	leaky_relu.Alpha = 0.1f;
-	DML_OPERATOR_DESC activation_op = { DML_OPERATOR_ACTIVATION_LEAKY_RELU, &leaky_relu };
-	conv_op_desc.FusedActivation = &activation_op;
-	DML_OPERATOR_DESC op_desc{};
-	op_desc.Type = DML_OPERATOR_CONVOLUTION;
-	op_desc.Desc = &conv_op_desc;
-	check_hresult(m_dml_device->CreateOperator(&op_desc, __uuidof(m_dml_op), m_dml_op.put_void()));
+	DML_OPERATOR_DESC op_desc = {};
+	op_desc.Type = op_type;
+	
+	if (op_type == DML_OPERATOR_ACTIVATION_RELU) {		
+		DML_ACTIVATION_RELU_OPERATOR_DESC* relu_op = new DML_ACTIVATION_RELU_OPERATOR_DESC{};
+		op_desc.Desc = relu_op;
+	}
+	else if (op_type == DML_OPERATOR_ACTIVATION_LEAKY_RELU)	{
+		DML_ACTIVATION_LEAKY_RELU_OPERATOR_DESC* leaky_relu = new DML_ACTIVATION_LEAKY_RELU_OPERATOR_DESC{};
+		leaky_relu->Alpha = 0.1f;
+		op_desc.Desc = leaky_relu;
+	}
+	else if (op_type == DML_OPERATOR_ACTIVATION_TANH) {
+		DML_ACTIVATION_TANH_OPERATOR_DESC* tanh_op = new DML_ACTIVATION_TANH_OPERATOR_DESC{};
+		op_desc.Desc = tanh_op;
+	}
+	else
+	{
+
+	}
+	
+	conv_op_desc.FusedActivation = op_desc.Desc ? &op_desc : nullptr;
+	DML_OPERATOR_DESC op_desc1{};
+	op_desc1.Type = DML_OPERATOR_CONVOLUTION;
+	op_desc1.Desc = &conv_op_desc;
+	check_hresult(m_dml_device->CreateOperator(&op_desc1, __uuidof(m_dml_op), m_dml_op.put_void()));
 	DML_EXECUTION_FLAGS exe_flg{ DML_EXECUTION_FLAG_NONE };
 	if (data_type == DML_TENSOR_DATA_TYPE_FLOAT16) {
 		exe_flg |= DML_EXECUTION_FLAG_ALLOW_HALF_PRECISION_COMPUTATION;
 	}
 	check_hresult(m_dml_device->CompileOperator(m_dml_op.get(), exe_flg, __uuidof(m_pso), m_pso.put_void()));
+	if (op_desc.Desc) {
+		delete op_desc.Desc;
+	}
 }
 
 void DMLInferer::CreateIdentityOp()
