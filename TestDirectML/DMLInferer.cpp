@@ -17,8 +17,8 @@ void DMLInferer::CreateAddOp(DML_TENSOR_DATA_TYPE dtype)
 	m_op_type = DML_OPERATOR_ELEMENT_WISE_ADD;
 	m_data_type = dtype;
 	UINT input_dim[4]{ 1, 1, 10, 10 };
-	m_input_tensor.Create(dtype, input_dim, 4);
-	m_output_tensor.Create(dtype, input_dim, 4);
+	m_input_tensor.Create(dtype, input_dim, 4, false);
+	m_output_tensor.Create(dtype, input_dim, 4, false);
 	DML_ELEMENT_WISE_ADD_OPERATOR_DESC op_desc{};
 	op_desc.ATensor = &m_input_tensor.GetDesc();
 	op_desc.BTensor = &m_input_tensor.GetDesc();
@@ -83,6 +83,9 @@ void DMLInferer::InitD3D12(bool use_warp)
 	}
 	DXGI_ADAPTER_DESC3 adapter_desc{};
 	check_hresult(dxgi_adapter->GetDesc3(&adapter_desc));
+	if (adapter_desc.VendorId == 0x10DE) {
+		m_is_nvidia = true;
+	}
 	check_hresult(D3D12CreateDevice(dxgi_adapter.get(), D3D_FEATURE_LEVEL_12_0, __uuidof(m_device), m_device.put_void()));
 	D3D12_COMMAND_QUEUE_DESC command_queue_desc{
 		D3D12_COMMAND_LIST_TYPE_DIRECT, 
@@ -108,11 +111,11 @@ void DMLInferer::CreateConvolutionOp(DML_TENSOR_DATA_TYPE dtype, DML_OPERATOR_TY
 	m_op_type = DML_OPERATOR_CONVOLUTION;
 	m_data_type = dtype;
 	DML_TENSOR_DATA_TYPE data_type{ dtype };
-	UINT input_dim[4]{ 1, 1, 960, 540 };
-	m_input_tensor.Create(data_type, input_dim, 4);
+	UINT input_dim[4]{ 1, 1, 540, 960 };
+	m_input_tensor.Create(data_type, input_dim, 4, m_is_nvidia);
 	UINT filter_dim[4]{ 1, 1, 3, 3 };
-	m_filter_tensor.Create(data_type, filter_dim, 4);
-	m_output_tensor.Create(data_type, input_dim, 4);
+	m_filter_tensor.Create(data_type, filter_dim, 4, false);
+	m_output_tensor.Create(data_type, input_dim, 4, false);
 	DML_CONVOLUTION_OPERATOR_DESC conv_op_desc{};
 	conv_op_desc.InputTensor = &m_input_tensor.GetDesc();
 	conv_op_desc.FilterTensor = &m_filter_tensor.GetDesc();
@@ -171,8 +174,8 @@ void DMLInferer::CreateConvolutionOp(DML_TENSOR_DATA_TYPE dtype, DML_OPERATOR_TY
 void DMLInferer::CreateIdentityOp()
 {
 	UINT input_dim[4]{ 1, 1, 10, 10 };
-	m_input_tensor.Create(DML_TENSOR_DATA_TYPE_FLOAT32, input_dim, 4);
-	m_output_tensor.Create(DML_TENSOR_DATA_TYPE_FLOAT32, input_dim, 4);
+	m_input_tensor.Create(DML_TENSOR_DATA_TYPE_FLOAT32, input_dim, 4, false);
+	m_output_tensor.Create(DML_TENSOR_DATA_TYPE_FLOAT32, input_dim, 4, false);
 	DML_ELEMENT_WISE_IDENTITY_OPERATOR_DESC op_desc{};
 	op_desc.InputTensor = &m_input_tensor.GetDesc();
 	op_desc.OutputTensor = &m_output_tensor.GetDesc();
@@ -189,9 +192,9 @@ void DMLInferer::CreateTransposedConvolutionOp(DML_TENSOR_DATA_TYPE data_type)
 	m_data_type = data_type;
 	m_is_backward = true;
 	UINT input_dim[4]{ 1, 1, 5, 5 };
-	m_input_tensor.Create(data_type, input_dim, 4);
+	m_input_tensor.Create(data_type, input_dim, 4, false);
 	UINT filter_dim[4]{ 1, 1, 3, 3 };
-	m_filter_tensor.Create(data_type, filter_dim, 4);
+	m_filter_tensor.Create(data_type, filter_dim, 4, false);
 	UINT strides[2] = { 2, 2 };
 	UINT dilations[2] = { 1, 1 };
 	UINT start_pad[2] = { 0, 0 };
@@ -202,7 +205,7 @@ void DMLInferer::CreateTransposedConvolutionOp(DML_TENSOR_DATA_TYPE data_type)
 		_cal_transposed_conv_2d_out_size(input_dim[2], strides[0], start_pad[0] + end_pad[0], dilations[0], filter_dim[2], output_pad[0]), 
 		_cal_transposed_conv_2d_out_size(input_dim[3], strides[1], start_pad[1] + end_pad[1], dilations[1], filter_dim[3], output_pad[1])
 	};
-	m_output_tensor.Create(data_type, output_dim, 4);
+	m_output_tensor.Create(data_type, output_dim, 4, false);
 	DML_CONVOLUTION_OPERATOR_DESC conv_op_desc{};
 	conv_op_desc.InputTensor = &m_input_tensor.GetDesc();
 	conv_op_desc.FilterTensor = &m_filter_tensor.GetDesc();
@@ -464,9 +467,9 @@ void DMLInferer::_upload_convolution_data()
 		
 		std::unique_ptr<uint16_t> input_data = std::unique_ptr<uint16_t>(new uint16_t[m_input_tensor.GetElementCount()]);
 		std::unique_ptr<FLOAT> data = std::unique_ptr<FLOAT>(new FLOAT[m_input_tensor.GetElementCount()]);
-		int base = -10;
+		float base = m_input_tensor.GetElementCount();
 		for (int i = 0; i < m_input_tensor.GetElementCount(); ++i) {
-			input_data.get()[i] = Float16Compressor::compress(base + i);
+			input_data.get()[i] = Float16Compressor::compress((i+1)/base);
 			data.get()[i] = Float16Compressor::decompress(input_data.get()[i]);
 		}
 		_print_tensor("input", m_input_tensor, data.get());
@@ -577,7 +580,7 @@ DMLTensor::~DMLTensor()
 {
 }
 
-void DMLTensor::Create(DML_TENSOR_DATA_TYPE data_type, const UINT* dims, UINT dim_cnt)
+void DMLTensor::Create(DML_TENSOR_DATA_TYPE data_type, const UINT* dims, UINT dim_cnt, bool is_interleaved)
 {
 	if (dim_cnt != 4 && dim_cnt != 5) {
 		winrt::throw_hresult(E_INVALIDARG);
@@ -587,7 +590,12 @@ void DMLTensor::Create(DML_TENSOR_DATA_TYPE data_type, const UINT* dims, UINT di
 	m_buffer_desc.Flags = DML_TENSOR_FLAG_NONE;
 	m_buffer_desc.DimensionCount = dim_cnt;
 	m_buffer_desc.Sizes = m_dims;
-	m_buffer_desc.Strides = nullptr;
+	UINT strides[4]{};
+	strides[0] = dims[1] * dims[2] * dims[3];
+	strides[1] = 1;
+	strides[2] = dims[1];
+	strides[3] = dims[1] * dims[2];
+	m_buffer_desc.Strides = is_interleaved ? strides : nullptr;
 	m_buffer_desc.TotalTensorSizeInBytes = DMLCalcBufferTensorSize(data_type, dim_cnt, dims, nullptr);
 	m_buffer_desc.GuaranteedBaseOffsetAlignment = 256;
 

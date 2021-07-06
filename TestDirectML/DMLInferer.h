@@ -6,7 +6,7 @@ class DMLTensor
 public:
 	DMLTensor();
 	~DMLTensor();
-	void Create(DML_TENSOR_DATA_TYPE data_type, const UINT* dims, UINT dim_cnt);
+	void Create(DML_TENSOR_DATA_TYPE data_type, const UINT* dims, UINT dim_cnt, bool is_interleaved);
 	
 	DML_TENSOR_DESC& GetDesc();
 	UINT64 GetTensorSizeInBytes();
@@ -73,6 +73,7 @@ private:
 	DML_TENSOR_DATA_TYPE m_data_type{};
 	bool m_is_backward{ false };
 	bool m_enable_print{ false };
+	bool m_is_nvidia{ false };
 };
 
 template<class DataType>

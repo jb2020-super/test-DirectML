@@ -1,8 +1,28 @@
 # Test DirectML operators 
 ## Identity Op
 ## Convolution Op
+
+### Performance
+
+| Device      | Convolution(ns) | Convolution Optimized(ns) |
+| ----------- | --------------- | ------------------------- |
+| AMD 5700 XT | 148,160         | NA                        |
+| RTX 3090    | 318,016         | 45,120                    |
+
+- RTX 3090
+
+<img src="\test\3090-conv.PNG" style="zoom:50%;" />
+
+- RTX 3090 with optimize
+
+<img src="\test\3090-conv-optimized.PNG" style="zoom:50%;" />
+
+- AMD 5700 XT
+
+<img src="\test\5700xt_conv.PNG" style="zoom:50%;" />
+
 ## Transposed Convolution Op
-```
+```tex
 Input Dimension: 10x10
 1.618   1.618   1.618   1.618   1.618   1.618   1.618   1.618   1.618   1.618
 1.618   1.618   1.618   1.618   1.618   1.618   1.618   1.618   1.618   1.618
