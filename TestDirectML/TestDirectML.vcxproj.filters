@@ -43,5 +43,6 @@
     <None Include="umHalf.inl">
       <Filter>Header Files</Filter>
     </None>
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>
